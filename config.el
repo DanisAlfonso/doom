@@ -206,3 +206,58 @@
 ;; ─── Syntax highlighting para archivos .inc (The Art of ARM Assembly) ──
 ;; Asocia .inc con asm-mode (ensamblador GAS ARM64)
 (add-to-list 'auto-mode-alist '("\\.inc\\'" . asm-mode))
+
+;; ─── Favoritos: consult-theme solo con mis temas preferidos ──────────
+;; Uso: SPC h d r
+;;
+;; La preview funciona igual que consult-theme gracias a que Doom ya tiene
+;; configurado :preview-key '("C-SPC" :debounce 0.5 any) para consult-theme.
+;; Al heredar esa configuración, la preview es automática al navegar.
+
+(defvar my/favorite-themes
+  '(doom-tomorrow-day        ;; tu tema actual
+    doom-one-light
+    doom-ayu-light
+    doom-plain
+    doom-earl-grey
+    doom-opera-light
+    doom-solarized-light
+
+    doom-spacegrey
+    doom-miramare
+    doom-zenburn
+    doom-gruvbox
+    doom-sourcerer
+    doom-lantern
+    doom-1337
+    doom-plain-dark
+    doom-oksolar-dark
+    doom-wilmersdorf
+    doom-one
+    doom-horizon
+    doom-dracula
+    doom-solarized-dark
+    doom-winter-is-coming-dark-blue
+    doom-city-lights
+    doom-challenger-deep)     ;; oscuro (demo)
+  "Lista de símbolos de temas para `my/consult-theme-favorites'.
+Agrega o quita temas a tu gusto.")
+
+(defun my/consult-theme-favorites ()
+  "Como `consult-theme', pero limitado a `my/favorite-themes'.
+Temporalmente filtra `custom-available-themes' con `cl-letf'."
+  (interactive)
+  (let ((orig-fn (symbol-function 'custom-available-themes)))
+    (cl-letf (((symbol-function 'custom-available-themes)
+               (lambda ()
+                 (seq-filter
+                  (lambda (theme) (memq theme my/favorite-themes))
+                  (funcall orig-fn)))))
+      (call-interactively #'consult-theme))))
+
+;; ─── Atajo: SPC h d r para temas favoritos ───────────────────────────
+;; SPC h t   → consult-theme  (todos los temas)
+;; SPC h d r → my/consult-theme-favorites  (solo tus favoritos)
+(map! :leader
+      :desc "Temas favoritos (consult-theme limitado)"
+      "h d r" #'my/consult-theme-favorites)
