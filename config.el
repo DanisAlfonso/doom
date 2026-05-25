@@ -22,7 +22,7 @@
 ;;   - "Victor Mono"
 
 ;; ─── Tema ─────────────────────────────────────────────────────
-    (setq doom-theme 'doom-tomorrow-day)
+    (setq doom-theme 'doom-horizon)
 
 ;; ─── Números de línea relativos (ideal para evil) ────────────
 (setq display-line-numbers-type 'relative)
@@ -207,6 +207,140 @@
 ;; Asocia .inc con asm-mode (ensamblador GAS ARM64)
 (add-to-list 'auto-mode-alist '("\\.inc\\'" . asm-mode))
 
+;; ─── Org mode ────────────────────────────────────────────────────
+;; Configuración general de Org-mode. Los flags del módulo
+;; (org +pretty +dragndrop +journal +roam2) ya están en init.el.
+
+(after! org
+  ;; ── Directorio base ──────────────────────────────────────────
+  (setq org-directory "~/org"
+        org-default-notes-file (expand-file-name "inbox.org" org-directory)
+        org-archive-location (expand-file-name "archive/%s_archive" org-directory))
+
+  ;; ── Apariencia / Lectura ─────────────────────────────────────
+  (setq org-startup-folded 'content
+        org-hide-emphasis-markers t
+        org-fontify-whole-heading-line t
+        org-fontify-done-headline t
+        org-fontify-quote-and-verse-blocks t
+        org-src-fontify-natively t
+        org-src-tab-acts-natively t)
+
+  ;; ── Imágenes ─────────────────────────────────────────────────
+  (setq org-image-actual-width '(700)
+        org-display-inline-images t
+        org-redisplay-inline-images t)
+
+  ;; ── TODO / Gestión de tareas ─────────────────────────────────
+  (setq org-todo-keywords
+        '((sequence "TODO(t)" "NEXT(n)" "WAIT(w@/!)" "|" "DONE(d!)" "CANCELLED(c@/!)")
+          (sequence "|" "NOTE(N)")))
+  (setq org-log-done 'time
+        org-log-into-drawer t
+        org-enforce-todo-dependencies t)
+
+  ;; ── Agendas ──────────────────────────────────────────────────
+  (setq org-agenda-files (list org-directory)
+        org-agenda-start-with-log-mode t
+        org-agenda-start-on-weekday nil
+        org-agenda-span 7
+        org-deadline-warning-days 7)
+
+  ;; ── Captura (org-capture) ────────────────────────────────────
+  (setq org-capture-templates
+        '(("t" "Tarea" entry
+           (file+headline org-default-notes-file "Tareas")
+           "* TODO %?\n:PROPERTIES:\n:CREATED: %U\n:END:\n%a\n")
+          ("n" "Nota rápida" entry
+           (file+headline org-default-notes-file "Notas")
+           "* NOTE %?\n:PROPERTIES:\n:CREATED: %U\n:END:\n")
+          ("i" "Idea" entry
+           (file+headline org-default-notes-file "Ideas")
+           "* IDEA %?\n:PROPERTIES:\n:CREATED: %U\n:END:\n")
+          ("w" "Enlace/web" entry
+           (file+headline org-default-notes-file "Web")
+           "* %?\n:PROPERTIES:\n:CREATED: %U\n:SOURCE: %c\n:END:\n%a\n")))
+
+  ;; ── Refiling ─────────────────────────────────────────────────
+  (setq org-refile-targets '((nil :maxlevel . 3)
+                             (org-agenda-files :maxlevel . 3))
+        org-refile-use-outline-path t
+        org-outline-path-complete-in-steps nil)
+
+  ;; ── Enlaces ──────────────────────────────────────────────────
+  (setq org-link-descriptive t
+        org-confirm-shell-link-function 'y-or-n-p
+        org-confirm-elisp-link-function 'y-or-n-p)
+
+  ;; ── Babel ────────────────────────────────────────────────────
+  (setq org-confirm-babel-evaluate nil)
+
+  ;; ── Exportación ──────────────────────────────────────────────
+  (setq org-export-with-sub-superscripts '{}
+        org-export-with-toc t
+        org-export-with-tags 'not-in-toc
+        org-export-headline-levels 8
+        org-export-with-smart-quotes t))
+
+;; ─── org-modern (post-config) ──────────────────────────────────
+(use-package! org-modern
+  :hook (org-mode . org-modern-mode)
+  :config
+  (setq org-modern-star '("▪" "◆" "●" "○" "▶" "▷")
+        org-modern-label-border nil
+        org-modern-table-vertical 1
+        org-modern-table-horizontal 0.5
+        org-modern-list '((?- . "–") (?* . "•") (?+ . "◦")))
+  (org-modern-mode +1))
+
+;; ─── org-roam v2 ───────────────────────────────────────────────
+(use-package! org-roam
+  :defer t
+  :config
+  (setq org-roam-directory (file-truename "~/org/roam")
+        org-roam-dailies-directory "daily/"
+        org-roam-index-file "index.org"
+        org-roam-capture-templates
+        '(("d" "default" plain
+           "%?"
+           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                              "#+title: ${title}\n#+date: %U\n#+filetags:\n")
+           :unnarrowed t)
+          ("p" "project" plain
+           "* TODO %?\n"
+           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                              "#+title: ${title}\n#+date: %U\n#+filetags: project\n")
+           :unnarrowed t))
+        org-roam-dailies-capture-templates
+        '(("d" "default" entry
+           "* %?"
+           :target (file+head "%<%Y-%m-%d>.org"
+                              "#+title: %<%Y-%m-%d>\n"))))
+  (org-roam-db-autosync-mode +1))
+
+;; ─── org-journal ───────────────────────────────────────────────
+(use-package! org-journal
+  :defer t
+  :config
+  (setq org-journal-dir "~/org/journal"
+        org-journal-date-format "%A, %Y-%m-%d"
+        org-journal-file-format "%Y-%m-%d.org"
+        org-journal-file-type 'daily
+        org-journal-enable-agenda-integration t))
+
+;; ─── Atajos para Org ───────────────────────────────────────────
+(map! :map org-mode-map
+      :n "C-c n" #'org-journal-new-entry
+      :n "C-c r" #'org-roam-node-find
+      :n "C-c i" #'org-roam-node-insert
+      :n "C-c R" #'org-roam-random-note)
+
+(map! :leader
+      :desc "Org capture" "n c" #'org-capture
+      :desc "Org agenda"  "n a" #'org-agenda
+      :desc "Org roam"    "n r" #'org-roam-node-find
+      :desc "Org journal" "n j" #'org-journal-new-entry)
+
 ;; ─── Favoritos: consult-theme solo con mis temas preferidos ──────────
 ;; Uso: SPC h d r
 ;;
@@ -231,13 +365,11 @@
     doom-lantern
     doom-1337
     doom-plain-dark
-    doom-oksolar-dark
     doom-wilmersdorf
     doom-one
     doom-horizon
     doom-dracula
     doom-solarized-dark
-    doom-winter-is-coming-dark-blue
     doom-city-lights
     doom-challenger-deep)     ;; oscuro (demo)
   "Lista de símbolos de temas para `my/consult-theme-favorites'.
